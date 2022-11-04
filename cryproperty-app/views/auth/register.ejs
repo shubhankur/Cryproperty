@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+</head>
+<body>
+    <h1>Register</h1>
+    <form action="/user/register" method="POST">
+        <div>
+            <label for="name">Name</label>
+            <input type="text" id="name" name="user[name]">
+        </div>
+        <div>
+            <label for="address">Address</label>
+            <input type="text" id="address" name="user[address]">
+        </div>
+        <div>
+            <label for="phone">Phone</label>
+            <input type="text" id="phone" name="user[phone]">
+        </div>
+        <div>
+            <select id="role" name="user[role]">
+                <option value="1">Owner</option>
+                <option value="2">User</option>
+            </select>
+        </div>
+        <button>Register</button>
+    </form>
+</body>
+</html>
