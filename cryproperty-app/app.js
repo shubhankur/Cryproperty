@@ -1,5 +1,6 @@
 const express =require('express');
 const app= express();
+const alert = require('alert');
 const path = require('path');
 const mongoose = require('mongoose');
 const Property = require('./models/property.js');
@@ -45,10 +46,19 @@ app.get('/user/login', (req,res)=> {
 
 //register
 app.post('/user/register', async(req,res)=> {
-    const user = new User(req.body.user);
-    await user.save();
+    var user = await User.findOne({ethaddress: req.body.user.ethaddress});
+    if(user){
+        alert("Could Not Create New User. User with this eth address already exists");
+        res.redirect("/user/registerpage");
+        return;
+    }
+    else{
+        console.log("Saving new user");
+        user = new User(req.body.user);
+        await user.save();
+    }
     console.log(user);
-    res.redirect('/property/list')
+    res.redirect("/property/list");
 })
 
 //create new property view page
