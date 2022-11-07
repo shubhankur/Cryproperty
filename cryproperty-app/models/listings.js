@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const ListingSchema = new Schema({
-    userAddress:String,
+    userId:String,
     propertyId:String
 });
 

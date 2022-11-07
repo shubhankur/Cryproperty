@@ -4,22 +4,24 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>View Property</title>
 </head>
 <body>
 
     <h1><%=property.title %></h1>
     <ul>
-            <li>Location: <%=property.location %></li>
-            <li>Details: <%=property.description %></li>
-            <li>Total Value: <%=property.price %></li>
-            <li>Total Fractions<%=property.fractions %></li>
-            <li>Available Fractions<%=property.available %></li>
-            <li>Rate <%=property.price/property.fractions%></li>
+        <li> Name: <%=property.title %> </li>
+        <li> Price: <%=property.price %> </li>
+        <li> Description: <%=property.description %> </li>
+        <li> Location: <%=property.location %> </li>
+        <li> Number of Fractions: <%=property.fractions %> </li>
+        <li> Available Units: <%=property.available %> </li>
+        <li> Rate: <%=property.price/property.fractions %> </li>
+        <li> Phase: <%=property.phase %> </li>
     </ul>
     <div>
-    <button> Buy </button>
-    <button> Sell </button>
+    <button>Buy</button>
+    <button>Sell</button>
     </div>
     <br>
     <a href="/property/list">View all properties</a>

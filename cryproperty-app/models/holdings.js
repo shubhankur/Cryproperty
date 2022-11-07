@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const HoldingSchema = new Schema({
-    userAddress:String,
+    userId:String,
     propertyId:String,
     amount:Number
 });
