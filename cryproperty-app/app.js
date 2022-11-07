@@ -47,6 +47,7 @@ app.get('/user/login', (req,res)=> {
 app.post('/user/register', async(req,res)=> {
     const user = new User(req.body.user);
     await user.save();
+    console.log(user);
     res.redirect('/property/list')
 })
 
