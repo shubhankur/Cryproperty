@@ -121,10 +121,7 @@ app.get('/user/dashboard', async (req,res)=>{
     openDashboard(user);
 });
 
-//create new property view page
-function createNewProperty(user){
-
-}
+//View Create Property Page
 app.get('/property/new', async (req, res) => {
     const user = req.query.user;
     res.render("properties/new", {user});
