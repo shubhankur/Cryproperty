@@ -10,7 +10,12 @@
 
     <h1><%=property.title %></h1>
     <ul>
-            <li><%=property.location %></li>
+            <li>Location: <%=property.location %></li>
+            <li>Details: <%=property.description %></li>
+            <li>Total Value: <%=property.price %></li>
+            <li>Total Fractions<%=property.fractions %></li>
+            <li>Available Fractions<%=property.available %></li>
+            <li>Rate <%=property.price/property.fractions%></li>
     </ul>
     <div>
     <button> Buy </button>

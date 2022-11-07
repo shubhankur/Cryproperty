@@ -6,7 +6,9 @@ const PropertySchema = new Schema({
     "price":Number,
     "description":String,
     "location":String,
-    "fractions":Number
+    "fractions":Number,
+    "available":Number,
+    "phase":Number
 });
 
 module.exports = mongoose.model('Property', PropertySchema);

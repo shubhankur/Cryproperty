@@ -40,8 +40,14 @@ app.get('/user/registerpage', (req,res)=> {
 })
 
 //login 
-app.get('/user/login', (req,res)=> {
-    res.render('login.ejs')
+app.post('/user/login', async (req,res)=> {
+    var user = await User.findOne({ethaddress: req.body.user.ethaddress});
+    if(!user){
+        alert("User Does Not Exist");
+        res.redirect("/user/registerpage");
+        return;
+    }
+    res.redirect('/property/list')
 })
 
 //register
