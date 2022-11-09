@@ -8,8 +8,14 @@ const User = require('./models/user.js');
 const Listing = require('./models/listings.js');
 const Holding = require('./models/holdings.js');
 const url = require('url');
+const Web3 = require('web3');
+const Trade = require('../cryproperty-contract/abis/Trade.json')
+const detectEthereumProvider = require('@metamask/detect-provider');
+
+app.use(express.static('../cryproperty-contract/abis'));
 
 
+var tradeContract;
 //Connecting our database
 const uri = "mongodb+srv://shubh99:Shubh%401998@cryproperty.zypeh.mongodb.net/Cryproperty";
 mongoose.connect(uri);
@@ -24,7 +30,9 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static(__dirname + '/public'));
 
-//Defining APIs
+//Global Variables
+var contracts = {};
+var web3Provider;
 
 //Landing Page
 app.get('/', (req, res) => {
@@ -101,7 +109,7 @@ async function openDashboard(user,res) {
     }
     //user
     else {
-        var holdings = await Holding.find({ userId: user.id });
+        var holdings = await Holding.find({ userId: user._id});
         if (holdings) {
             var propertyAmountMap = [];
             for (let holding of holdings) {
@@ -139,11 +147,12 @@ app.post('/property', async (req, res) => {
     const property = new Property(req.body.property)
     property.available = property.fractions;
     property.phase = 1;
+    property.owner = user.ethaddress;
+    property.rate = property.price/property.fractions;
     await property.save();
     var listing = {userId:user._id, propertyId:property._id};
     listing = new Listing(listing);
     await listing.save();
-    console.log(listing);
     openDashboard(user,res);
 })
 
@@ -159,6 +168,83 @@ app.get('/property/:id', async (req, res) => {
     res.render("properties/show.ejs", { property })
 })
 
+//buy
+app.get('/buy', async(req, res) =>{
+    initWeb3();
+    const useraddress = req.query.useraddress;
+    const propertyId = req.query.propertyId;
+    var user = await User.findOne({ ethaddress: useraddress});
+    if(!user){
+        alert("Could not find user");
+        return;
+    }
+    if(user.role==1){
+        alert("User Account is registered as a Merchant");
+        return;
+    }
+    var property = await Property.findById(propertyId);
+    var rate = property.rate;
+    await tradeContract.methods.sendMoney(property.owner).send({from:useraddress, value:web3.utils.toWei(rate.toString(), 'Ether')})
+    .once('receipt',async (receipt)=>{
+        if(receipt.status){
+            await processBuy(property, user);
+        }
+        else{
+            alert("Buying could not be processed. Amount will be reverted soon");
+            await tradeContract.methods.sendMoney(useraddress).send({from: property.owner, value:web3.utils.toWei(rate.toString(), 'Ether')})
+        }
+    });
+    openDashboard(user,res);
+});
+
+async function processBuy(property, user){
+    alert("Bought Successfully");
+    property.buyers.push(user.ethaddress);
+    property.available = property.available-1;
+    await property.save();
+    var holding = await Holding.findOne({
+        userId : user._id,
+        propertyId : property._id
+    });
+    if(!holding){
+        const newHolding = new Holding({
+            userId :user._id,
+            propertyId: property._id,
+            amount: 1
+        });
+        await newHolding.save();
+    }
+    else{
+        holding.amount++;
+        await holding.save();
+    }
+}
+
+//sell
+app.get('/sell', async(req, res) =>{
+    const useraddress = req.query.useraddress;
+    const propertyId = req.query.propertyId;
+    var property = await Property.findById(propertyId);
+    res.send(useraddress+":"+property);
+})
+
 app.listen(3000, () => {
     console.log('Serving on port 3000')
 })
+
+async function initWeb3() {
+    // Is there is an injected web3 instance?
+    if (typeof web3 !== 'undefined') {
+    web3Provider = web3.currentProvider;
+    } else {
+    // If no injected web3 instance is detected, fallback to the TestRPC
+    web3Provider = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
+    }
+    web3 = new Web3(web3Provider);
+    initContract();
+};
+
+function initContract() {
+    const networkData = Trade.networks[5777];
+    tradeContract = new web3.eth.Contract(Trade.abi, networkData.address);
+}
