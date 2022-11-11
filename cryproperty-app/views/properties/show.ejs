@@ -65,19 +65,16 @@
                 sellButton.disabled = false;
                 window.userWalletAddress = accounts[0];
                 console.log(window.userWalletAddress);
-
                 var a = document.createElement('a');
                 var link = document.createTextNode('Buy');
                 a.appendChild(link);
                 a.href = `/buy?useraddress=${window.userWalletAddress}&&propertyId=${propertyId}`;
                 buyButton.appendChild(a);
-
                 var a2 = document.createElement('a');
                 var link2 = document.createTextNode('Sell');
                 a2.appendChild(link2);
                 a2.href = `/sell?useraddress=${window.userWalletAddress}&&propertyId=${propertyId}`;
                 sellButton.appendChild(a2);
-
             }
             const buy = async () => {
                 console.log("buying");

@@ -8,8 +8,9 @@
 </head>
 <body>
     <h1>Hello! <%= user.name %></h1>
-    <h3><a href="/property/list?phase=2">View Listed Properties</a>
-        <a href="/property/list?phase=1">View Ongoing Biddings</a></h3>
+    <h3><button><a href="/property/list?phase=2">View Listed Properties</a></button>
+        <button><a href="/property/list?phase=1">View Ongoing Biddings</a></h3></button>
+        <button><a href="/">Go to Home Page</a></h3></button>
     <h3>Your Holdings</h3>
     <ul>
         <% for(let property of propertyAmountMap){ %>
@@ -21,6 +22,14 @@
             <li> Available Units <%=property.property.available %> </li>
             <li> Rate <%=property.property.rate %> </li>
             <li> Your Holding <%=property.amount%> </li>
+        <% } %>
+    </ul>
+</br>
+    <h3>Your Requests</h3>
+    <ul>
+        <% for(let request of requests){ %>
+            <li> PropertyId <%=request.propertyId %> </li>
+            <li> Type <%=request.type %> </li>
         <% } %>
     </ul>
 </body>

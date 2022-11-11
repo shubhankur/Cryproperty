@@ -1,8 +1,9 @@
 const mongoose =require('mongoose');
-const Property= require('../models/Property')
-const User= require('../models/User')
-const Holding= require('../models/Holding')
-const Listing= require('../models/Listing')
+const Property = require('../models/property.js');
+const User = require('../models/user.js');
+const Listing = require('../models/listings.js');
+const Holding = require('../models/holdings.js');
+const Request = require('../models/requests.js');
 const cities= require('./cities')
 const {places, descriptors} = require('./seedhelpers')
 mongoose.connect("mongodb+srv://shubh99:Shubh%401998@cryproperty.zypeh.mongodb.net/Cryproperty");
@@ -27,6 +28,7 @@ const seedDB = async () => {
     await User.deleteMany({});
     await Holding.deleteMany({});
     await Listing.deleteMany({});
+    await Request.deleteMany({});
 }
 
 seedDB().then(() => {

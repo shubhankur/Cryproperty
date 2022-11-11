@@ -7,6 +7,7 @@ const Property = require('./models/property.js');
 const User = require('./models/user.js');
 const Listing = require('./models/listings.js');
 const Holding = require('./models/holdings.js');
+const Request = require('./models/requests.js');
 const url = require('url');
 const Web3 = require('web3');
 const Trade = require('../cryproperty-contract/abis/Trade.json')
@@ -57,7 +58,7 @@ app.post('/user/login', async (req, res) => {
         res.redirect("/user/registerpage");
         return;
     }
-    else{
+    else {
         openDashboard(user, res);
     }
 })
@@ -75,27 +76,26 @@ app.post('/user/register', async (req, res) => {
         user = new User(req.body.user);
         await user.save();
     }
-    console.log(user);
-    openDashboard(user,res);
+    openDashboard(user, res);
 })
 
 //open dashboard
-async function openDashboard(user,res) {
+async function openDashboard(user, res) {
     var listings = [];
     //merchant
     if (user.role == 1) {
         listings = await Listing.find({ userId: user._id });
         var propertyIds = [];
         if (listings) {
-            for(let listing of listings){
+            for (let listing of listings) {
                 //console.log(listing.propertyId);
                 propertyIds.push(listing.propertyId);
             }
             var properties = await Property.find({
-                '_id': { $in: propertyIds}
+                '_id': { $in: propertyIds }
             });
             //console.log(properties);
-            res.user 
+            res.user
             res.render('merchantDashboard', { user: user, properties: properties })
         }
         else {
@@ -109,7 +109,8 @@ async function openDashboard(user,res) {
     }
     //user
     else {
-        var holdings = await Holding.find({ userId: user._id});
+        var holdings = await Holding.find({ userId: user._id });
+        var requests = await Request.find({ useraddress: user.ethaddress })
         if (holdings) {
             var propertyAmountMap = [];
             for (let holding of holdings) {
@@ -117,30 +118,30 @@ async function openDashboard(user,res) {
                 const map = { property: property, amount: holding.amount };
                 propertyAmountMap.push(map);
             }
-            res.render('userDashboard.ejs', { user, propertyAmountMap })
+            res.render('userDashboard.ejs', { user, propertyAmountMap, requests })
         }
         else {
             res.redirect('/properties/list')
         }
     }
 }
-app.get('/user/dashboard', async (req,res)=>{
+app.get('/user/dashboard', async (req, res) => {
     const user = req.query.user;
-    openDashboard(user);
+    openDashboard(user, res);
 });
 
 //View Create Property Page
 app.get('/property/new', async (req, res) => {
     const user = req.query.user;
-    res.render("properties/new", {user});
+    res.render("properties/new", { user });
 })
 
 //create new property
 app.post('/property', async (req, res) => {
     console.log(req.body.user.ethaddress);
-    const user = await User.findOne({ethaddress:req.body.user.ethaddress});
+    const user = await User.findOne({ ethaddress: req.body.user.ethaddress });
     console.log(user);
-    if(!user || user.role!=1){
+    if (!user || user.role != 1) {
         alert("User is not signed in as a Merchant");
         res.redirect("/user/loginpage");
     }
@@ -148,17 +149,17 @@ app.post('/property', async (req, res) => {
     property.available = property.fractions;
     property.phase = 1;
     property.owner = user.ethaddress;
-    property.rate = property.price/property.fractions;
+    property.rate = property.price / property.fractions;
     await property.save();
-    var listing = {userId:user._id, propertyId:property._id};
+    var listing = { userId: user._id, propertyId: property._id };
     listing = new Listing(listing);
     await listing.save();
-    openDashboard(user,res);
+    openDashboard(user, res);
 })
 
 //list all the properties
 app.get('/property/list', async (req, res) => {
-    const properties = await Property.find({phase:req.query.phase});
+    const properties = await Property.find({ phase: req.query.phase });
     res.render("properties/index.ejs", { properties })
 })
 
@@ -169,64 +170,247 @@ app.get('/property/:id', async (req, res) => {
 })
 
 //buy
-app.get('/buy', async(req, res) =>{
+app.get('/buy', async (req, res) => {
     initWeb3();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
-    var user = await User.findOne({ ethaddress: useraddress});
-    if(!user){
+    var user = await User.findOne({ ethaddress: useraddress });
+    if (!user) {
         alert("Could not find user");
+        openDashboard(user, res);
         return;
     }
-    if(user.role==1){
+    if (user.role == 1) {
         alert("User Account is registered as a Merchant");
+        openDashboard(user, res);
+        return;
+    }
+    var buyingRequest = await Request.findOne({
+        propertyId: propertyId,
+        type: 1,
+        useraddress: useraddress
+    })
+    if (buyingRequest) {
+        alert("Buying Request already raised");
+        openDashboard(user, res);
         return;
     }
     var property = await Property.findById(propertyId);
     var rate = property.rate;
-    await tradeContract.methods.sendMoney(property.owner).send({from:useraddress, value:web3.utils.toWei(rate.toString(), 'Ether')})
-    .once('receipt',async (receipt)=>{
-        if(receipt.status){
-            await processBuy(property, user);
-        }
-        else{
-            alert("Buying could not be processed. Amount will be reverted soon");
-            await tradeContract.methods.sendMoney(useraddress).send({from: property.owner, value:web3.utils.toWei(rate.toString(), 'Ether')})
-        }
-    });
-    openDashboard(user,res);
+    var request = await Request.findOne({
+        propertyId: propertyId,
+        type: 2
+    })
+    var flag = -1;
+    if (request) {
+        await tradeContract.methods.sendMoney(request.useraddress).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+            .once('receipt', async (receipt) => {
+                if (receipt.status) {
+                    flag = 0;
+                    //await processBuy(user._id, seller._id, property, false);
+                }
+                else {
+                    alert("Buying could not be processed. Amount will be reverted soon");
+                    await tradeContract.methods.sendMoney(useraddress).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
+                }
+            });
+    }
+    else if (property.available > 0) {
+        await tradeContract.methods.sendMoney(property.owner).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+            .once('receipt', async (receipt) => {
+                if (receipt.status) {
+                    flag = 1;
+                    //processBuy(user._id, property.owner, property, true);
+                }
+                else {
+                    alert("Buying could not be processed. Amount will be reverted soon");
+                    await tradeContract.methods.sendMoney(useraddress).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
+                }
+            });
+    }
+    else {
+        request = new Request({
+            type: 1,
+            propertyId: propertyId,
+            useraddress: useraddress
+        });
+        await request.save();
+    } 
+    if(flag==0){
+        var seller = await User.findOne({
+            ethaddress: request.useraddress
+        })
+        await Request.deleteOne({
+            _id: request._id
+        })
+        await processBuy(user, seller._id, property, false, res);
+        return;
+    }
+    else if(flag==1){
+        await processBuy(user, property.owner, property, true, res);
+        return;
+    }
+    openDashboard(user, res);
 });
 
-async function processBuy(property, user){
+async function processBuy(buyer, sellerId, property, fromOwner, res) {
+    if (!fromOwner) {
+        var sellerHolding = await Holding.findOne({
+            userId: sellerId,
+            propertyId: property._id
+        });
+        if (sellerHolding.amount > 1) {
+            sellerHolding.amount--;
+            await sellerHolding.save();
+        }
+        else {
+            await sellerHolding.delete();
+        }
+    }
+    else {
+        property.available = property.available - 1;
+        await property.save();
+    }
     alert("Bought Successfully");
-    property.buyers.push(user.ethaddress);
-    property.available = property.available-1;
-    await property.save();
-    var holding = await Holding.findOne({
-        userId : user._id,
-        propertyId : property._id
+    var buyerHolding = await Holding.findOne({
+        userId: buyer._id,
+        propertyId: property._id
     });
-    if(!holding){
-        const newHolding = new Holding({
-            userId :user._id,
+    if (!buyerHolding) {
+        buyerHolding = new Holding({
+            userId: buyer._id,
             propertyId: property._id,
+            amount: 1
+        });
+    }
+    else {
+        buyerHolding.amount++;
+    }
+    await buyerHolding.save(function(error, holding){
+        if(error){
+            console.log(error);
+        }
+        else{
+            console.log(holding);
+            openDashboard(buyer, res);
+        }
+    });
+}
+
+//sell
+app.get('/sell', async (req, res) => {
+    initWeb3();
+    const useraddress = req.query.useraddress;
+    const propertyId = req.query.propertyId;
+    var user = await User.findOne({ ethaddress: useraddress });
+    if (!user) {
+        alert("Could not find user");
+        openDashboard(user, res);
+        return;
+    }
+    if (user.role == 1) {
+        alert("User Account is registered as a Merchant");
+        openDashboard(user, res);
+        return;
+    }
+    var sellingRequest = await Request.findOne({
+        propertyId: propertyId,
+        type: 2,
+        useraddress: useraddress
+    })
+    if (sellingRequest) {
+        alert("Selling Request is already raised");
+        openDashboard(user, res);
+        return;
+    }
+    var property = await Property.findById(propertyId);
+    var holding = await Holding.findOne({
+        userId: user._id,
+        propertyId: propertyId
+    })
+    if (holding) {
+
+    }
+    else {
+        alert("You dont own this property");
+        openDashboard(user, res);
+        return;
+    }
+    var request = await Request.findOne({
+        propertyId: propertyId,
+        type: 1
+    })
+    const rate = property.rate;
+    if (request) {
+        console.log("Request Matched");
+        await tradeContract.methods.sendMoney(useraddress).send({ from: request.useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+            .once('receipt', async (receipt) => {
+                if (receipt.status) {
+                    buyer = await User.findOne({
+                        ethaddress: request.useraddress
+                    })
+                    await request.delete();
+                    await processSell(user, buyer._id, propertyId, res);
+                    return;
+                }
+                else {
+                    alert("Sell could not be processed. Amount will be reverted soon");
+                    await tradeContract.methods.sendMoney(useraddress).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
+                }
+            });
+    }
+    else {
+        request = new Request({
+            type: 2,
+            propertyId: propertyId,
+            useraddress: useraddress
+        });
+        await request.save();
+        openDashboard(user, res);
+    }
+})
+
+async function processSell(seller, buyerId, propertyId, res) {
+    alert("Sold Succesfully");
+    var buyerHolding = await Holding.findOne({
+        userId: buyerId,
+        propertyId: propertyId
+    });
+    if (!buyerHolding) {
+        const newHolding = new Holding({
+            userId: buyerId,
+            propertyId: propertyId,
             amount: 1
         });
         await newHolding.save();
     }
-    else{
-        holding.amount++;
-        await holding.save();
+    else {
+        buyerHolding.amount++;
+        await buyerHolding.save();
+    }
+    var sellerHolding = await Holding.findOne({
+        userId: seller._id,
+        propertyId: propertyId
+    });
+    if (sellerHolding.amount > 1) {
+        sellerHolding.amount--;
+        await sellerHolding.save(function(error, holding){
+            if(holding){
+                console.log(sellerHolding);
+                openDashboard(seller,res);
+            }
+            else if(error){
+                console.log(error);
+            }
+        });
+    }
+    else {
+        await Holding.deleteOne({
+            _id: sellerHolding._id
+        })
+        openDashboard(seller,res);
     }
 }
-
-//sell
-app.get('/sell', async(req, res) =>{
-    const useraddress = req.query.useraddress;
-    const propertyId = req.query.propertyId;
-    var property = await Property.findById(propertyId);
-    res.send(useraddress+":"+property);
-})
 
 app.listen(3000, () => {
     console.log('Serving on port 3000')
@@ -235,10 +419,10 @@ app.listen(3000, () => {
 async function initWeb3() {
     // Is there is an injected web3 instance?
     if (typeof web3 !== 'undefined') {
-    web3Provider = web3.currentProvider;
+        web3Provider = web3.currentProvider;
     } else {
-    // If no injected web3 instance is detected, fallback to the TestRPC
-    web3Provider = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
+        // If no injected web3 instance is detected, fallback to the TestRPC
+        web3Provider = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
     }
     web3 = new Web3(web3Provider);
     initContract();

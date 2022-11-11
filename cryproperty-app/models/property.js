@@ -11,8 +11,6 @@ const PropertySchema = new Schema({
     "available":Number,
     "phase":Number,
     "owner":String,
-    "sellers":[String],
-    "buyers":[String],
     "bidders":[String],
     "votes":Number
 });
