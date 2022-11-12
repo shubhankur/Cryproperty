@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/theDikshaSaxena/Cryproperty.git"
+    "url": "git+https://github.com/shubhankur/Cryproperty.git"
   },
   "author": "Diksha",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/theDikshaSaxena/Cryproperty/issues"
+    "url": "https://github.com/shubhankur/Cryproperty/issues"
   },
-  "homepage": "https://github.com/theDikshaSaxena/Cryproperty#readme",
+  "homepage": "https://github.com/shubhankur/Cryproperty#readme",
   "dependencies": {
     "@metamask/detect-provider": "^2.0.0",
     "alert": "^5.1.1",
