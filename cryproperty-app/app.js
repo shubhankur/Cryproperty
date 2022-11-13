@@ -11,6 +11,7 @@ const Request = require('./models/requests.js');
 const url = require('url');
 const Web3 = require('web3');
 const Trade = require('../cryproperty-contract/abis/Trade.json')
+const Bid = require('../cryproperty-contract/abis/Bid.json')
 const detectEthereumProvider = require('@metamask/detect-provider');
 
 app.use(express.static('../cryproperty-contract/abis'));
@@ -125,6 +126,7 @@ async function openDashboard(user, res) {
         }
     }
 }
+
 app.get('/user/dashboard', async (req, res) => {
     const user = req.query.user;
     openDashboard(user, res);
@@ -166,12 +168,90 @@ app.get('/property/list', async (req, res) => {
 //list particular property
 app.get('/property/:id', async (req, res) => {
     const property = await Property.findById(req.params.id);
-    res.render("properties/show.ejs", { property })
+    if(req.query.phase==2)
+    {
+        res.render("properties/show.ejs", { property })
+    }
+    else
+    {
+        res.render("properties/bid.ejs", { property })
+    }
+    
 })
+
+app.get('/bid', async (req,res)=> {
+    initWeb3();
+    const useraddress = req.query.useraddress;
+    const propertyId = req.query.propertyId;
+    var user = await User.findOne({ ethaddress: useraddress });
+    if (!user) {
+        alert("Could not find user");
+        openDashboard(user, res);
+        return;
+    }
+    if (user.role == 1) {
+        alert("User Account is registered as a Merchant");
+        openDashboard(user, res);
+        return;
+    }
+    await bidContract.methods.biddingStatus(property.owner).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+            .once('receipt', async (receipt) => {
+                if (receipt.status) {
+                    flag = 1;
+                }
+                else {
+                    alert("Bidding could not be processed");
+                }
+            });
+
+            handleVote: function(event) {
+                event.preventDefault();
+                var propertyId = parseInt($(event.target).data('id'));
+                var voteInstance;
+            
+                web3.eth.getAccounts(function(error, accounts) {
+                  var account = accounts[0];
+            
+                  App.contracts.vote.deployed().then(function(instance) {
+                    voteInstance = instance;
+            
+                    return voteInstance.vote(proposalId, {from: account});
+                  }).then(function(result, err){
+                        if(result){
+                            console.log(result.receipt.status);
+                            if(parseInt(result.receipt.status) == 1)
+                            alert(account + " voting done successfully")
+                            else
+                            alert(account + " voting not done successfully due to revert")
+                        } else {
+                            alert(account + " voting failed")
+                        }   
+                    });
+                });
+              },
+            
+              handleWinner : function() {
+                console.log("To get winner");
+                var voteInstance;
+                App.contracts.vote.deployed().then(function(instance) {
+                  voteInstance = instance;
+                  return voteInstance.reqWinner();
+                }).then(function(res){
+                console.log(res);
+                  alert(App.names[res] + "  is the winner ! :)");
+                }).catch(function(err){
+                  console.log(err.message);
+                })
+              }
+            }
+);
+
+
 
 //buy
 app.get('/buy', async (req, res) => {
     initWeb3();
+    initTradeContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     var user = await User.findOne({ ethaddress: useraddress });
@@ -300,6 +380,7 @@ async function processBuy(buyer, sellerId, property, fromOwner, res) {
 //sell
 app.get('/sell', async (req, res) => {
     initWeb3();
+    initTradeContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     var user = await User.findOne({ ethaddress: useraddress });
@@ -425,10 +506,15 @@ async function initWeb3() {
         web3Provider = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
     }
     web3 = new Web3(web3Provider);
-    initContract();
+    initBidContract();
 };
 
-function initContract() {
+function initBidContract() {
+    const networkData = Bid.networks[5777];
+    bidContract = new web3.eth.Contract(Bid.abi, networkData.address);
+}
+
+function initTradeContract() {
     const networkData = Trade.networks[5777];
     tradeContract = new web3.eth.Contract(Trade.abi, networkData.address);
 }

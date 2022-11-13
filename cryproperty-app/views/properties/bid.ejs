@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Property</title>
+</head>
+
+<body>
+    <% var propertyId=property._id%>
+        <h1>
+            <%=property.title %>
+        </h1>
+        <ul>
+            <li> Name: <%=property.title %>
+            </li>
+            <li> Price: <%=property.price %>
+            </li>
+            <li> Description: <%=property.description %>
+            </li>
+            <li> Location: <%=property.location %>
+            </li>
+            <li> Number of Fractions: <%=property.fractions %>
+            </li>
+            <li> Available Units: <%=property.available %>
+            </li>
+            <li> Rate: <%=property.price /property.fractions %>
+            </li>
+            <li> Phase: <%=property.phase %>
+            </li>
+        </ul>
+        <div>
+            <button id="bid">BID</button>
+        </div>
+        <br>
+        <div>
+            <button id="bidCount">Number of Bids</button>
+        </div>
+        <br>
+        <div>
+            <button id="Acceptance">Acceptance</button>
+        </div>
+        <br>
+        <a href="/property/list">View all properties</a>
+        <script>
+            window.userWalletAddress = null
+            var propertyId = "<%= property._id%>";
+            const buyButton = document.getElementById('bid')
+
+            function toggleButton() {
+                if (!window.ethereum) {
+                    bidButton.disabled = true;
+                    window.alert("Metamask is not connected/installed");
+                    return false
+                }
+                process();
+            }
+
+            async function process() {
+                console.log("Processing")
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+                    .catch((e) => {
+                        console.error(e.message)
+                        return
+                    })
+                if (!accounts) { return }
+                bidButton.disabled = false;
+                window.userWalletAddress = accounts[0];
+                console.log(window.userWalletAddress);
+                var a = document.createElement('a');
+                var link = document.createTextNode('Bid');
+                a.appendChild(link);
+                a.href = `/bid?useraddress=${window.userWalletAddress}&&propertyId=${propertyId}`;
+                bidButton.appendChild(a);
+            }
+            const bid = async () => {
+                console.log("bidding");
+                let request = new XMLHttpRequest();
+                const url = `/bid?useraddress=${window.userWalletAddress}`;
+                request.open("GET", url, true);
+                request.send();
+            }
+            window.addEventListener('DOMContentLoaded', () => {
+                toggleButton()
+            });
+        </script>
+</body>
+
+</html>
