@@ -435,16 +435,12 @@ app.get('/bid', async (req, res) => {
     var property = await Property.findOne({
         "_id": propertyId
     })
-    try {
-        await bidContract.methods.vote(propertyId).send({ from: useraddress })
-        .then(result => { console.log(result) })
-            .catch(revertReason => console.log({ revertReason}));
-    }
-    catch (error) {
-        
-    }
+    await bidContract.methods.vote(propertyId).send({ from: useraddress })
+        .then(result => { alert("Bid Succesfull") })
+        .catch(revertReason => alert(revertReason));
     var voteCount;
     voteCount = await bidContract.methods.getVoteCount(propertyId).call();
+    console.log(voteCount);
     if (parseInt(voteCount) >= 5) {
         property.phase = 2;
         await property.save();
