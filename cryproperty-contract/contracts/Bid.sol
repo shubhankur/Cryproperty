@@ -6,7 +6,7 @@ contract Bid{
     }
     mapping(string=>voteDetails) public propertyVoteDetails;
 
-    function vote(string memory propertyId)public{
+    function vote(string memory propertyId)public returns(bool){
         voteDetails storage vd = propertyVoteDetails[propertyId];
         require(vd.voteCount <5, "Bidding is Over");
         mapping (address => bool) storage userIds = vd.userIds;
@@ -14,6 +14,7 @@ contract Bid{
         vd.voteCount++;
         vd.userIds[msg.sender] = true;
         propertyVoteDetails[propertyId] = vd;
+        return vd.voteCount>=5;
     }
 
     function getVoteCount(string memory propertyId)public view returns (uint){
