@@ -34,6 +34,7 @@
         <div>
             <button id="buy"></button>
             <button id="sell"></button>
+            <button id="bid"></button>
         </div>
         <br>
         <a href="/property/list">View all properties</a>
@@ -42,8 +43,19 @@
             var propertyId = "<%= property._id%>";
             const buyButton = document.getElementById('buy')
             const sellButton = document.getElementById('sell')
-
+            const bidButton = document.getElementById('bid');
+            bidButton.style.visibility = 'hidden';
             function toggleButton() {
+                buyButton.style.visibility = 'hidden';
+                sellButton.style.visibility = 'hidden';
+                var phase = "<%= property.phase%>";
+                if (phase === "1") {
+                    bidButton.style.visibility = 'visible';
+                }
+                else {
+                    buyButton.style.visibility = 'visible';
+                    sellButton.style.visibility = 'visible';
+                }
                 if (!window.ethereum) {
                     buyButton.disabled = true;
                     sellButton.disabled = true;
@@ -75,6 +87,11 @@
                 a2.appendChild(link2);
                 a2.href = `/sell?useraddress=${window.userWalletAddress}&&propertyId=${propertyId}`;
                 sellButton.appendChild(a2);
+                var a3 = document.createElement('a');
+                var link3 = document.createTextNode('Bid');
+                a3.appendChild(link3);
+                a3.href = `/bid?useraddress=${window.userWalletAddress}&&propertyId=${propertyId}`;
+                bidButton.appendChild(a3);
             }
             const buy = async () => {
                 console.log("buying");

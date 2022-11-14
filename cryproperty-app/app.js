@@ -11,12 +11,13 @@ const Request = require('./models/requests.js');
 const url = require('url');
 const Web3 = require('web3');
 const Trade = require('../cryproperty-contract/abis/Trade.json')
+const Bid = require('../cryproperty-contract/abis/Bid.json')
+
 const detectEthereumProvider = require('@metamask/detect-provider');
 
 app.use(express.static('../cryproperty-contract/abis'));
 
 
-var tradeContract;
 //Connecting our database
 const uri = "mongodb+srv://shubh99:Shubh%401998@cryproperty.zypeh.mongodb.net/Cryproperty";
 mongoose.connect(uri);
@@ -32,7 +33,8 @@ app.use(express.urlencoded({ extended: true }))
 app.use(express.static(__dirname + '/public'));
 
 //Global Variables
-var contracts = {};
+var tradeContract;
+var bidContract;
 var web3Provider;
 
 //Landing Page
@@ -172,6 +174,7 @@ app.get('/property/:id', async (req, res) => {
 //buy
 app.get('/buy', async (req, res) => {
     initWeb3();
+    initTradeContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     var user = await User.findOne({ ethaddress: useraddress });
@@ -235,8 +238,8 @@ app.get('/buy', async (req, res) => {
             useraddress: useraddress
         });
         await request.save();
-    } 
-    if(flag==0){
+    }
+    if (flag == 0) {
         var seller = await User.findOne({
             ethaddress: request.useraddress
         })
@@ -246,7 +249,7 @@ app.get('/buy', async (req, res) => {
         await processBuy(user, seller._id, property, false, res);
         return;
     }
-    else if(flag==1){
+    else if (flag == 1) {
         await processBuy(user, property.owner, property, true, res);
         return;
     }
@@ -286,11 +289,11 @@ async function processBuy(buyer, sellerId, property, fromOwner, res) {
     else {
         buyerHolding.amount++;
     }
-    await buyerHolding.save(function(error, holding){
-        if(error){
+    await buyerHolding.save(function (error, holding) {
+        if (error) {
             console.log(error);
         }
-        else{
+        else {
             console.log(holding);
             openDashboard(buyer, res);
         }
@@ -300,6 +303,7 @@ async function processBuy(buyer, sellerId, property, fromOwner, res) {
 //sell
 app.get('/sell', async (req, res) => {
     initWeb3();
+    initTradeContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     var user = await User.findOne({ ethaddress: useraddress });
@@ -394,12 +398,12 @@ async function processSell(seller, buyerId, propertyId, res) {
     });
     if (sellerHolding.amount > 1) {
         sellerHolding.amount--;
-        await sellerHolding.save(function(error, holding){
-            if(holding){
+        await sellerHolding.save(function (error, holding) {
+            if (holding) {
                 console.log(sellerHolding);
-                openDashboard(seller,res);
+                openDashboard(seller, res);
             }
-            else if(error){
+            else if (error) {
                 console.log(error);
             }
         });
@@ -408,9 +412,46 @@ async function processSell(seller, buyerId, propertyId, res) {
         await Holding.deleteOne({
             _id: sellerHolding._id
         })
-        openDashboard(seller,res);
+        openDashboard(seller, res);
     }
 }
+
+app.get('/bid', async (req, res) => {
+    initWeb3();
+    initBidContract();
+    const useraddress = req.query.useraddress;
+    const propertyId = req.query.propertyId;
+    const user = await User.findOne({
+        ethaddress: useraddress
+    })
+    if (!user) {
+        alert("You need to register before bidding");
+        res.render('auth/register.ejs');
+    }
+    else if (user.role == 1) {
+        alert("You are registeres as a Merchant");
+        res.render('auth/login.ejs');
+    }
+    var property = await Property.findOne({
+        "_id": propertyId
+    })
+    try {
+        await bidContract.methods.vote(propertyId).send({ from: useraddress })
+        .then(result => { console.log(result) })
+            .catch(revertReason => console.log({ revertReason}));
+    }
+    catch (error) {
+        
+    }
+    var voteCount;
+    voteCount = await bidContract.methods.getVoteCount(propertyId).call();
+    if (parseInt(voteCount) >= 5) {
+        property.phase = 2;
+        await property.save();
+    }
+    openDashboard(user, res);
+
+});
 
 app.listen(3000, () => {
     console.log('Serving on port 3000')
@@ -425,10 +466,16 @@ async function initWeb3() {
         web3Provider = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
     }
     web3 = new Web3(web3Provider);
-    initContract();
+    web3.eth.handleRevert = true;
 };
 
-function initContract() {
-    const networkData = Trade.networks[5777];
+async function initTradeContract() {
+    const networkId = await web3.eth.net.getId()
+    const networkData = Trade.networks[networkId];
     tradeContract = new web3.eth.Contract(Trade.abi, networkData.address);
+}
+async function initBidContract() {
+    const networkId = await web3.eth.net.getId()
+    const networkData = Bid.networks[networkId];
+    bidContract = new web3.eth.Contract(Bid.abi, networkData.address);
 }
