@@ -206,7 +206,7 @@ app.get('/buy', async (req, res) => {
     })
     var flag = -1;
     if (request) {
-        await tradeContract.methods.sendMoney(request.useraddress, propertyId).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+        await tradeContract.methods.sendMoney(request.useraddress).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
             .once('receipt', async (receipt) => {
                 if (receipt.status) {
                     flag = 0;
@@ -214,12 +214,12 @@ app.get('/buy', async (req, res) => {
                 }
                 else {
                     alert("Buying could not be processed. Amount will be reverted soon");
-                    await tradeContract.methods.sendMoney(useraddress, propertyId).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
+                    await tradeContract.methods.sendMoney(useraddress).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
                 }
             });
     }
     else if (property.available > 0) {
-        await tradeContract.methods.sendMoney(property.owner, propertyId).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+        await tradeContract.methods.sendMoney(property.owner).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
             .once('receipt', async (receipt) => {
                 if (receipt.status) {
                     flag = 1;
@@ -227,7 +227,7 @@ app.get('/buy', async (req, res) => {
                 }
                 else {
                     alert("Buying could not be processed. Amount will be reverted soon");
-                    await tradeContract.methods.sendMoney(useraddress, propertyId).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
+                    await tradeContract.methods.sendMoney(useraddress).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
                 }
             });
     }
@@ -347,7 +347,7 @@ app.get('/sell', async (req, res) => {
     const rate = property.rate;
     if (request) {
         console.log("Request Matched");
-        await tradeContract.methods.sendMoney(useraddress, propertyId).send({ from: request.useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+        await tradeContract.methods.sendMoney(useraddress).send({ from: request.useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
             .once('receipt', async (receipt) => {
                 if (receipt.status) {
                     buyer = await User.findOne({
@@ -359,7 +359,7 @@ app.get('/sell', async (req, res) => {
                 }
                 else {
                     alert("Sell could not be processed. Amount will be reverted soon");
-                    await tradeContract.methods.sendMoney(useraddress, propertyId).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
+                    await tradeContract.methods.sendMoney(useraddress).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
                 }
             });
     }
