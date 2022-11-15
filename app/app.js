@@ -12,6 +12,7 @@ const url = require('url');
 const Web3 = require('web3');
 const Trade = require('../contract/abis/Trade.json')
 const Bid = require('../contract/abis/Bid.json')
+const Trading = require('../contract/abis/Trading.json')
 
 const detectEthereumProvider = require('@metamask/detect-provider');
 
@@ -34,6 +35,7 @@ app.use(express.static(__dirname + '/public'));
 
 //Global Variables
 var tradeContract;
+var tradingContract;
 var bidContract;
 var web3Provider;
 
@@ -175,6 +177,7 @@ app.get('/property/:id', async (req, res) => {
 app.get('/buy', async (req, res) => {
     initWeb3();
     initTradeContract();
+    initTradingContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     var user = await User.findOne({ ethaddress: useraddress });
@@ -304,6 +307,7 @@ async function processBuy(buyer, sellerId, property, fromOwner, res) {
 app.get('/sell', async (req, res) => {
     initWeb3();
     initTradeContract();
+    initTradingContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     var user = await User.findOne({ ethaddress: useraddress });
@@ -474,4 +478,9 @@ async function initBidContract() {
     const networkId = await web3.eth.net.getId()
     const networkData = Bid.networks[networkId];
     bidContract = new web3.eth.Contract(Bid.abi, networkData.address);
+}
+async function initTradingContract() {
+    const networkId = await web3.eth.net.getId()
+    const networkData = Trading.networks[networkId];
+    tradingContract = new web3.eth.Contract(Trading.abi, networkData.address);
 }
