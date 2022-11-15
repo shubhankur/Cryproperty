@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+</head>
+
+<body>
+    <h1>Register</h1>
+    <form action="/user/register" method="POST">
+        <div>
+            <label for="name">Name</label>
+            <input type="text" id="name" name="user[name]">
+        </div>
+        </br>
+        <div>
+            <button type="button" id = "loginButton" onclick="">
+                Login with MetaMask
+            </button>
+            <script>
+                window.userWalletAddress = null;
+                document.getElementById("loginButton");
+                function toggleButton() {
+                    if (!window.ethereum) {
+                        window.alert("Metamask is not installed");
+                        return false
+                    }
+                    loginButton.addEventListener('click', loginWithMetaMask)
+                }
+                async function loginWithMetaMask() {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+                        .catch((e) => {
+                            console.error(e.message)
+                            return
+                        })
+                    if (!accounts) { return }
+                    window.userWalletAddress = accounts[0];
+                    document.getElementById("ethaddress").value = window.userWalletAddress;
+                    document.getElementById("ethaddressdata").value = window.userWalletAddress;
+                    console.log("Login Succesful");
+                }
+                window.addEventListener('DOMContentLoaded', () => {
+                    toggleButton()
+                });
+            </script>
+        </div>
+    </br>
+        <div>
+            <label for="ethaddress">Account Address</label>
+            <input type="text" id="ethaddress" readonly>
+            <input type="hidden" id="ethaddressdata" name="user[ethaddress]">
+        </div>
+    </br>
+        <div>
+            <label for="role">Role</label>
+            <select id = "role" name = "user[role]">
+                <option value="1">Merchant</option>
+                <option value="2">Trader</option>
+            </select>
+        </div>
+        <button type="submit">Register</button>
+    </form>
+</body>
+
+</html>
