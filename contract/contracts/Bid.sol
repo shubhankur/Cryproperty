@@ -1,4 +1,5 @@
-pragma solidity >=0.4.21 <0.7.0;
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.7.21 <0.9.0;
 contract Bid{
     struct voteDetails {
         mapping (address => bool) userIds;
@@ -13,7 +14,6 @@ contract Bid{
         require(!userIds[msg.sender], "User has already voted");
         vd.voteCount++;
         vd.userIds[msg.sender] = true;
-        propertyVoteDetails[propertyId] = vd;
         return vd.voteCount>=5;
     }
 

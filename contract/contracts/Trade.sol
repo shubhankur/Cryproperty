@@ -1,7 +1,8 @@
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity >=0.7.21 <0.9.0;
 contract Trade{
-    function sendMoney(address buyer) public payable{
-        address payable to  = address(uint160(address(buyer)));
-        address(to).transfer(msg.value);
+    function sendMoney(address seller) public payable{
+        //address payable to  = address(uint160(address(buyer)));
+        address payable to = payable(seller);
+        to.transfer(msg.value);
     }
 }

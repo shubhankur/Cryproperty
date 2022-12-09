@@ -10,9 +10,14 @@ const Holding = require('./models/holdings.js');
 const Request = require('./models/requests.js');
 const url = require('url');
 const Web3 = require('web3');
+const WalletConnectProvider = require("@walletconnect/web3-provider");
 const Trade = require('../contract/abis/Trade.json')
 const Bid = require('../contract/abis/Bid.json')
 const Trading = require('../contract/abis/Trading.json')
+const Prop = require('../contract/abis/MyPROP.json')
+require('dotenv').config();
+const { INFURA_URL} = process.env;
+
 
 const detectEthereumProvider = require('@metamask/detect-provider');
 
@@ -38,6 +43,8 @@ var tradeContract;
 var tradingContract;
 var bidContract;
 var web3Provider;
+var prop;
+var networkId;
 
 //Landing Page
 app.get('/', (req, res) => {
@@ -178,6 +185,7 @@ app.get('/buy', async (req, res) => {
     initWeb3();
     initTradeContract();
     initTradingContract();
+    initPropContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     var user = await User.findOne({ ethaddress: useraddress });
@@ -213,7 +221,11 @@ app.get('/buy', async (req, res) => {
             .once('receipt', async (receipt) => {
                 if (receipt.status) {
                     flag = 0;
-                    //await processBuy(user._id, seller._id, property, false);
+                    await prop.methods.transfer(request.useraddress, useraddress, propertyId)
+                        .then(result => {
+                            alert(result);
+                        })
+                        .catch(revertReason => alert(revertReason));
                 }
                 else {
                     alert("Buying could not be processed. Amount will be reverted soon");
@@ -226,6 +238,7 @@ app.get('/buy', async (req, res) => {
             .once('receipt', async (receipt) => {
                 if (receipt.status) {
                     flag = 1;
+                    await prop.methods.safeMint(useraddress, propertyId);
                     //processBuy(user._id, property.owner, property, true);
                 }
                 else {
@@ -249,6 +262,62 @@ app.get('/buy', async (req, res) => {
         await Request.deleteOne({
             _id: request._id
         })
+        await processBuy(user, seller._id, property, false, res);
+        return;
+    }
+    else if (flag == 1) {
+        await processBuy(user, property.owner, property, true, res);
+        return;
+    }
+    openDashboard(user, res);
+});
+
+//buy
+app.get('/buy/v2', async (req, res) => {
+    initWeb3();
+    initPropContract();
+    const useraddress = req.query.useraddress;
+    const propertyId = req.query.propertyId;
+    var user = await User.findOne({ ethaddress: useraddress });
+    if (!user) {
+        alert("Could not find user");
+        openDashboard(user, res);
+        return;
+    }
+    if (user.role == 1) {
+        alert("User Account is registered as a Merchant");
+        openDashboard(user, res);
+        return;
+    }
+    var property = await Property.findById(propertyId);
+    var rate = property.rate;
+    var flag = -1;
+
+    if (property.available > 0) {
+        await initTradeContract();
+        await tradeContract.methods.sendMoney(property.owner).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+            .once('receipt', async (receipt) => {
+                if (receipt.status) {
+                    flag = 1;
+                }
+                else {
+                    alert("Buying could not be processed. Amount will be reverted soon");
+                    await tradeContract.methods.sendMoney(useraddress).send({ from: property.owner, value: web3.utils.toWei(rate.toString(), 'Ether') })
+                }
+            });
+        await prop.methods.safeMint(useraddress);
+    }
+    else {
+        await initTradingContract();
+        await tradingContract.methods.buy(propertyId).send({ from: useraddress, value: web3.utils.toWei(rate.toString(), 'Ether') })
+            .then(result => {
+                alert(result);
+                flag = 0;
+            })
+            .catch(revertReason => alert(revertReason));
+    }
+
+    if (flag == 0) {
         await processBuy(user, seller._id, property, false, res);
         return;
     }
@@ -308,6 +377,7 @@ app.get('/sell', async (req, res) => {
     initWeb3();
     initTradeContract();
     initTradingContract();
+    initPropContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     var user = await User.findOne({ ethaddress: useraddress });
@@ -357,6 +427,11 @@ app.get('/sell', async (req, res) => {
                     buyer = await User.findOne({
                         ethaddress: request.useraddress
                     })
+                    await prop.methods.transfer(useraddress, request.useraddress, propertyId)
+                        .then(result => {
+                            alert(result);
+                        })
+                        .catch(revertReason => alert(revertReason));
                     await request.delete();
                     await processSell(user, buyer._id, propertyId, res);
                     return;
@@ -421,8 +496,8 @@ async function processSell(seller, buyerId, propertyId, res) {
 }
 
 app.get('/bid', async (req, res) => {
-    initWeb3();
-    initBidContract();
+    await initWeb3();
+    await initBidContract();
     const useraddress = req.query.useraddress;
     const propertyId = req.query.propertyId;
     const user = await User.findOne({
@@ -439,7 +514,7 @@ app.get('/bid', async (req, res) => {
     var property = await Property.findOne({
         "_id": propertyId
     })
-    await bidContract.methods.vote(propertyId).send({ from: useraddress })
+    await bidContract.methods.vote(propertyId).call({ from: useraddress })
         .then(result => { alert("Bid Succesfull") })
         .catch(revertReason => alert(revertReason));
     var voteCount;
@@ -463,24 +538,26 @@ async function initWeb3() {
         web3Provider = web3.currentProvider;
     } else {
         // If no injected web3 instance is detected, fallback to the TestRPC
-        web3Provider = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
+        web3Provider = new Web3.providers.HttpProvider(process.env.INFURA_URL);
     }
     web3 = new Web3(web3Provider);
     web3.eth.handleRevert = true;
+    networkId = 5;
 };
 
 async function initTradeContract() {
-    const networkId = await web3.eth.net.getId()
     const networkData = Trade.networks[networkId];
     tradeContract = new web3.eth.Contract(Trade.abi, networkData.address);
 }
 async function initBidContract() {
-    const networkId = await web3.eth.net.getId()
     const networkData = Bid.networks[networkId];
     bidContract = new web3.eth.Contract(Bid.abi, networkData.address);
 }
 async function initTradingContract() {
-    const networkId = await web3.eth.net.getId()
     const networkData = Trading.networks[networkId];
     tradingContract = new web3.eth.Contract(Trading.abi, networkData.address);
+}
+async function initPropContract() {
+    const networkData = Prop.networks[networkId];
+    prop = new web3.eth.Contract(Prop.abi, networkData.address);
 }

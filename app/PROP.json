@@ -1,0 +1,11 @@
+{
+    "name" : "CryProperty",
+    "description":"My Fractionalised Property",
+    "image" : "https://gateway.pinata.cloud/ipfs/QmfWvaPVVpJe4ifwcVdPrbYbsTkfnYkdfgyLd4SjGsMsJT",
+    "attributes" :[
+        {
+            "trait_type":"Project",
+            "value":"Property"
+        }
+    ]
+}

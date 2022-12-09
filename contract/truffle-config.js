@@ -1,16 +1,23 @@
+require('dotenv').config();
+const HDWalletProvider = require('@truffle/hdwallet-provider');
+const { INFURA_API_KEY, MNEMONIC } = process.env;
 module.exports = {
   networks: {
     development: {
-     host: "127.0.0.1",     // Localhost (default: none)
-     port: 7545,            // Standard Ethereum port (default: none)
-     network_id: "*",       // Any network (default: none)
+      host: "127.0.0.1",
+      port: 8545,
+      network_id: "5"
     },
+    goerli: {
+      provider: () => new HDWalletProvider(MNEMONIC,
+        INFURA_API_KEY),
+      network_id: '5',
+      gas: 4465030
+    }
   },
-
-  // Configure your compilers
   compilers: {
     solc: {
-      version: "0.5.16",
+      version: "0.8.1",
       settings: {   
        optimizer: {
          enabled: false,
@@ -19,6 +26,6 @@ module.exports = {
       }
     }
   },
-  contracts_directory:'contracts',
-  contracts_build_directory : 'abis'
+  contracts_directory: 'contracts',
+  contracts_build_directory: 'abis'
 };
