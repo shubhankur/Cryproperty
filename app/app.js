@@ -10,7 +10,6 @@ const Holding = require('./models/holdings.js');
 const Request = require('./models/requests.js');
 const url = require('url');
 const Web3 = require('web3');
-const WalletConnectProvider = require("@walletconnect/web3-provider");
 const Trade = require('../contract/abis/Trade.json')
 const Bid = require('../contract/abis/Bid.json')
 const Trading = require('../contract/abis/Trading.json')
